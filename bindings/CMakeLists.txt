@@ -1,3 +1,5 @@
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
+
 find_package(pybind11 CONFIG REQUIRED)
 
 pybind11_add_module(gliner_cpp MODULE python.cpp)
