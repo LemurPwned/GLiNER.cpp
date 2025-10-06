@@ -114,7 +114,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload wheels to PyPI (production)
-        if: env.IS_DRY_RUN == 'false' && secrets.PYPI_API_TOKEN != ''
+        if: env.IS_DRY_RUN == 'false'
         env:
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: python -m twine upload wheelhouse/*
@@ -193,29 +193,16 @@ jobs:
   release-build:
     name: Create GitHub Release
     needs: [build_wheels, build_sdist]
-    if: github.event_name == 'pull_request_target' && github.event.pull_request.merged == true
+    if: (github.event_name == 'pull_request_target' && github.event.pull_request.merged == true)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
       - name: Get version
         id: get_version
         run: |
-          python - <<'PY_SCRIPT'
-          import os
-          import tomllib
-          from pathlib import Path
-
-          data = tomllib.loads(Path('pyproject.toml').read_text())
-          version = data['project']['version']
-          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
-              fh.write(f"version={version}\n")
-          PY_SCRIPT
+          python -m pip install setuptools-scm
+          echo "version=$(python -c "import setuptools_scm; print(setuptools_scm.get_version())")" >> $GITHUB_OUTPUT
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -227,7 +214,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create "v${{ steps.get_version.outputs.version }}" \
-            --repo="$GITHUB_REPOSITORY" \
-            --title="${GITHUB_REPOSITORY#*/} ${{ steps.get_version.outputs.version }}" \
-            --generate-notes \
-            artifacts/*/*
+              --repo="$GITHUB_REPOSITORY" \
+              --title="${GITHUB_REPOSITORY#*/} ${{ steps.get_version.outputs.version }}" \
+              --generate-notes \
+              artifacts/*/*
