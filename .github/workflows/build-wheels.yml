@@ -48,8 +48,8 @@ jobs:
       CIBW_BUILD_REQUIRES: "setuptools>=61.0 setuptools-scm>=8.0 pybind11>=2.6.1 wheel"
       CIBW_TEST_COMMAND: "cd {project} && python test_bindings/test_inference.py"
       CIBW_TEST_SKIP: "*-musllinux*"
-      CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-      CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
+      CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
+      CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
       CIBW_ENVIRONMENT: 'CMAKE_ARGS=-DDOWNLOAD_ONNXRUNTIME=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DGIT_SUBMODULE=OFF PATH=$HOME/.cargo/bin:$PATH RUSTFLAGS="-A dangerous_implicit_autorefs"'
       CIBW_ENVIRONMENT_MACOS: 'CMAKE_ARGS=-DDOWNLOAD_ONNXRUNTIME=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DGIT_SUBMODULE=OFF MACOSX_DEPLOYMENT_TARGET=11.0 PATH=$HOME/.cargo/bin:$PATH RUSTFLAGS="-A dangerous_implicit_autorefs"'
       CIBW_BEFORE_BUILD: 'python -m pip install --upgrade "cmake>=3.26" && python {project}/scripts/patch_tokenizers_cmake.py'
