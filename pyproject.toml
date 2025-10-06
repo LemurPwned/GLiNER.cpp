@@ -32,8 +32,9 @@ BUILD_PYTHON = "ON"
 skip = ["*-win32", "*-manylinux_i686", "pp*"]
 
 [tool.cibuildwheel.linux]
-# Configure auditwheel to exclude system libraries
-repair-wheel-command = "auditwheel repair --exclude libdl.so.2 --exclude libpthread.so.0 --exclude librt.so.1 -w {dest_dir} {wheel}"
+# Configure auditwheel to exclude system libraries that are part of glibc
+# These are guaranteed to be present on all manylinux-compatible systems
+repair-wheel-command = "auditwheel repair --plat manylinux_2_34_x86_64 --exclude libdl.so.2 --exclude libpthread.so.0 --exclude librt.so.1 --exclude libm.so.6 --exclude libc.so.6 --exclude libgcc_s.so.1 --exclude libstdc++.so.6 -w {dest_dir} {wheel}"
 
 [tool.scikit-build.sdist]
 include = [

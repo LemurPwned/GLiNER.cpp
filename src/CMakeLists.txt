@@ -16,7 +16,7 @@ target_include_directories(gliner PUBLIC
 target_include_directories(gliner PRIVATE ${PROJECT_SOURCE_DIR}/include)
 
 target_link_libraries(gliner 
-    ${ONNXRUNTIME_LIB} 
+    ${ONNXRUNTIME_ALL_LIBS} 
     tokenizers_cpp
     ${PCRE2_LIBRARIES}
 )
