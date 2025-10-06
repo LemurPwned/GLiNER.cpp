@@ -29,23 +29,33 @@ def needs_update(version: str) -> bool:
 
 def make_replacer():
     state = {"updated": 0}
+    seen_versions: list[str] = []
 
     def replacer(match: re.Match[str]) -> str:
         prefix, version, suffix = match.groups()
+        seen_versions.append(version)
         if needs_update(version):
             state["updated"] += 1
             return f"{prefix}{TARGET_VERSION}{suffix}"
         return match.group(0)
 
-    return PATTERN, replacer, state
+    return PATTERN, replacer, state, seen_versions
 
 
 def patch(path: pathlib.Path) -> int:
     if not path.exists():
+        print(f"{path}: file not found")
         return 0
     text = path.read_text()
-    pattern, replacer, state = make_replacer()
+    pattern, replacer, state, seen_versions = make_replacer()
     new_text, _ = pattern.subn(replacer, text)
+    if seen_versions:
+        if state["updated"]:
+            print(f"{path}: updated {state['updated']} occurrence(s) (found versions: {', '.join(seen_versions)})")
+        else:
+            print(f"{path}: already >= {TARGET_VERSION} (found versions: {', '.join(seen_versions)})")
+    else:
+        print(f"{path}: no cmake_minimum_required directive found")
     if state["updated"]:
         path.write_text(new_text)
     return state["updated"]

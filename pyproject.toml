@@ -39,5 +39,5 @@ include = [
   "deps/CMakeLists.txt",
   "README.md",
   "LICENSE",
-  "scripts/generate_stubs.py"
+  "scripts/patch_tokenizers_cmake.py"
 ]
