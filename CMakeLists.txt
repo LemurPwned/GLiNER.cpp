@@ -7,6 +7,23 @@ if(UPDATE_SUBMODULES)
     include(cmake/UpdateSubmodules.cmake)
 endif()
 
+set(PATCH_TOKENIZERS_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/scripts/patch_tokenizers_cmake.py)
+if(EXISTS ${PATCH_TOKENIZERS_SCRIPT})
+    find_package(Python3 COMPONENTS Interpreter QUIET)
+    if(Python3_Interpreter_FOUND)
+        execute_process(
+            COMMAND ${Python3_EXECUTABLE} ${PATCH_TOKENIZERS_SCRIPT}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            RESULT_VARIABLE PATCH_TOKENIZERS_RESULT
+        )
+        if(NOT PATCH_TOKENIZERS_RESULT EQUAL 0)
+            message(FATAL_ERROR "Failed to patch tokenizers CMake files (exit code: ${PATCH_TOKENIZERS_RESULT}).")
+        endif()
+    else()
+        message(WARNING "Python3 interpreter not found; skipping tokenizers-cpp CMake patching.")
+    endif()
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)

@@ -38,7 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest]
     env:
       TWINE_USERNAME: __token__
       IS_DRY_RUN: "true"
@@ -50,9 +50,8 @@ jobs:
       CIBW_TEST_SKIP: "*-musllinux*"
       CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
       CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
-      CIBW_ENVIRONMENT: 'CMAKE_ARGS=-DDOWNLOAD_ONNXRUNTIME=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5 PATH=$HOME/.cargo/bin:$PATH RUSTFLAGS="-A dangerous_implicit_autorefs"'
-      CIBW_ENVIRONMENT_MACOS: 'CMAKE_ARGS=-DDOWNLOAD_ONNXRUNTIME=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5 MACOSX_DEPLOYMENT_TARGET=11.0 PATH=$HOME/.cargo/bin:$PATH RUSTFLAGS="-A dangerous_implicit_autorefs"'
-      CIBW_ENVIRONMENT_WINDOWS: 'CMAKE_ARGS=-DDOWNLOAD_ONNXRUNTIME=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5 PATH=%USERPROFILE%\.cargo\bin;%PATH% RUSTFLAGS="-A dangerous_implicit_autorefs"'
+      CIBW_ENVIRONMENT: 'CMAKE_ARGS=-DDOWNLOAD_ONNXRUNTIME=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DGIT_SUBMODULE=OFF PATH=$HOME/.cargo/bin:$PATH RUSTFLAGS="-A dangerous_implicit_autorefs"'
+      CIBW_ENVIRONMENT_MACOS: 'CMAKE_ARGS=-DDOWNLOAD_ONNXRUNTIME=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DGIT_SUBMODULE=OFF MACOSX_DEPLOYMENT_TARGET=11.0 PATH=$HOME/.cargo/bin:$PATH RUSTFLAGS="-A dangerous_implicit_autorefs"'
       CIBW_BEFORE_BUILD: "python {project}/scripts/patch_tokenizers_cmake.py"
       CIBW_BEFORE_ALL_LINUX: "if ! command -v curl >/dev/null 2>&1; then yum install -y curl; fi; curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --profile minimal -y"
     steps:
