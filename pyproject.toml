@@ -9,7 +9,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "gliner-cpp"
-version = "1.0.0"
+version = "0.1"
 description = "Python bindings for the GLiNER C++ inference library"
 readme = "README.md"
 license = { file = "LICENSE" }
