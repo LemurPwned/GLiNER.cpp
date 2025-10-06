@@ -1,45 +1,79 @@
-name: Build Wheels
+name: Build wheels with cibuildwheel
 
 on:
-  push:
-    branches: [ main ]
-    tags: [ 'v*' ]
   pull_request:
+    branches: [ main ]
+    paths:
+      - '**.cpp'
+      - '**.hpp'
+      - '**.py'
+      - 'pyproject.toml'
+      - 'CMakeLists.txt'
+      - 'bindings/**'
+      - '.github/workflows/**'
+
+  pull_request_target:
+    types: [closed]
+    branches: [ main ]
+    paths:
+      - '**.cpp'
+      - '**.hpp'
+      - '**.py'
+      - 'pyproject.toml'
+      - 'CMakeLists.txt'
+      - 'bindings/**'
+      - '.github/workflows/**'
+
   workflow_dispatch:
     inputs:
-      dry_run:
-        description: 'When false, publish built artifacts after a successful build'
-        required: false
-        default: true
+      dry-run:
+        description: 'Dry run (skip publish to PyPI)'
         type: boolean
+        default: true
 
 jobs:
-  wheels:
-    name: cibuildwheel (${{ matrix.cibw_platform }})
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.11", "3.12", "3.13"]
-        include:
-          - os: ubuntu-latest
-            cibw_platform: linux
-          - os: macos-latest
-            cibw_platform: macos
-          - os: windows-latest
-            cibw_platform: windows
-    runs-on: ${{ matrix.os }}
-
+        os: [ubuntu-latest, macos-latest, windows-latest]
     env:
-      CIBW_SKIP: pp*
+      TWINE_USERNAME: __token__
+      IS_DRY_RUN: "true"
+      CIBW_BUILD: "cp310-* cp311-* cp312-*"
+      CIBW_SKIP: "pp* *-win32 *-manylinux_i686"
+      CIBW_PROJECT_REQUIRES_PYTHON: ">=3.10"
+      CIBW_BUILD_REQUIRES: "setuptools>=61.0 setuptools-scm>=8.0 pybind11>=2.6.1 wheel"
+      CIBW_TEST_COMMAND: "cd {project} && python test_bindings/test_inference.py"
+      CIBW_TEST_SKIP: "*-musllinux*"
+      CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+      CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
       CIBW_ENVIRONMENT: CMAKE_ARGS=-DDOWNLOAD_ONNXRUNTIME=ON
       CIBW_ENVIRONMENT_MACOS: CMAKE_ARGS=-DDOWNLOAD_ONNXRUNTIME=ON MACOSX_DEPLOYMENT_TARGET=11.0
       CIBW_ENVIRONMENT_WINDOWS: CMAKE_ARGS=-DDOWNLOAD_ONNXRUNTIME=ON
-      CIBW_PROJECT_REQUIRES_PYTHON: ">=3.10"
-      CIBW_TEST_COMMAND: 'cd {project} && python test_bindings/test_inference.py'
-      DRY_RUN: "true"
-
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+
+      - name: Determine dry run mode
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_MERGED: ${{ github.event.pull_request.merged || false }}
+          DISPATCH_DRY_RUN: ${{ inputs['dry-run'] || 'true' }}
+        run: |
+          set -eo pipefail
+          is_dry_run=true
+          if [[ "$EVENT_NAME" == "pull_request_target" && "$PR_MERGED" == "true" ]]; then
+            is_dry_run=false
+          elif [[ "$EVENT_NAME" == "workflow_dispatch" && "$DISPATCH_DRY_RUN" == "false" ]]; then
+            is_dry_run=false
+          fi
+          echo "Dry run mode: $is_dry_run"
+          echo "IS_DRY_RUN=$is_dry_run" >> "$GITHUB_ENV"
 
       - name: Download test model assets
         shell: bash
@@ -55,55 +89,145 @@ jobs:
             "https://huggingface.co/onnx-community/${MODEL_NAME}/resolve/main/onnx/model.onnx" \
             -o "${MODEL_DIR}/model.onnx"
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install cibuildwheel
+        run: python -m pip install --upgrade pip cibuildwheel
+
+      - name: Build wheels
+        run: python -m cibuildwheel --output-dir wheelhouse
+
+      - name: Install twine
+        run: python -m pip install twine
+
+      - name: Check wheels
+        run: python -m twine check wheelhouse/*
+
+      - name: Upload wheels to Test PyPI (dry run)
+        if: env.IS_DRY_RUN == 'true' && secrets.TEST_PYPI_API_TOKEN != ''
+        env:
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        run: python -m twine upload --repository testpypi wheelhouse/* --verbose
+        continue-on-error: true
+
+      - name: Upload wheels to PyPI (production)
+        if: env.IS_DRY_RUN == 'false' && secrets.PYPI_API_TOKEN != ''
+        env:
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: python -m twine upload wheelhouse/*
+
+      - name: Upload wheels as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          path: wheelhouse/*.whl
+          retention-days: 30
+
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    env:
+      TWINE_USERNAME: __token__
+      IS_DRY_RUN: "true"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+
       - name: Determine dry run mode
         shell: bash
         env:
-          DISPATCH_DRY_RUN: ${{ inputs.dry_run }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_MERGED: ${{ github.event.pull_request.merged || false }}
+          DISPATCH_DRY_RUN: ${{ inputs['dry-run'] || 'true' }}
         run: |
-          dry_run=true
-          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
-            if [[ "$GITHUB_REF" == "refs/heads/main" || "$GITHUB_REF" == refs/tags/* ]]; then
-              dry_run=false
-            fi
-          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$DISPATCH_DRY_RUN" == "false" ]]; then
-            dry_run=false
+          set -eo pipefail
+          is_dry_run=true
+          if [[ "$EVENT_NAME" == "pull_request_target" && "$PR_MERGED" == "true" ]]; then
+            is_dry_run=false
+          elif [[ "$EVENT_NAME" == "workflow_dispatch" && "$DISPATCH_DRY_RUN" == "false" ]]; then
+            is_dry_run=false
           fi
-          echo "Dry run mode: $dry_run"
-          echo "DRY_RUN=$dry_run" >> "$GITHUB_ENV"
+          echo "Dry run mode: $is_dry_run"
+          echo "IS_DRY_RUN=$is_dry_run" >> "$GITHUB_ENV"
 
-      - name: Set up Python ${{ matrix.python }}
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python }}
+          python-version: "3.11"
 
-      - name: Install build tools
+      - name: Build sdist
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install cibuildwheel==2.20.0 build
+          python -m pip install --upgrade pip build
+          python -m build --sdist
 
-      - name: Build wheels
-        run: |
-          python -m cibuildwheel --output-dir wheelhouse --platform ${{ matrix.cibw_platform }}
+      - name: Install twine
+        run: python -m pip install twine
 
-      - name: Build sdist (linux only)
-        if: matrix.cibw_platform == 'linux'
-        run: |
-          python -m build --sdist --outdir wheelhouse
+      - name: Check sdist
+        run: python -m twine check dist/*
+
+      - name: Upload sdist to Test PyPI (dry run)
+        if: env.IS_DRY_RUN == 'true' && secrets.TEST_PYPI_API_TOKEN != ''
         env:
-          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        run: python -m twine upload --repository testpypi dist/* --verbose
+        continue-on-error: true
 
-      - name: Upload artifacts
+      - name: Upload sdist to PyPI (production)
+        if: env.IS_DRY_RUN == 'false' && secrets.PYPI_API_TOKEN != ''
+        env:
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: python -m twine upload dist/*
+
+      - name: Upload sdist as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gliner-cpp-${{ matrix.cibw_platform }}-wheels
-          path: wheelhouse
-          if-no-files-found: error
+          name: sdist
+          path: dist/*.tar.gz
+          retention-days: 30
 
-      - name: Publish to PyPI
-        if: env.DRY_RUN == 'false'
-        uses: pypa/gh-action-pypi-publish@release/v1
+  release-build:
+    name: Create GitHub Release
+    needs: [build_wheels, build_sdist]
+    if: github.event_name == 'pull_request_target' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
-          packages_dir: wheelhouse
-          skip_existing: true
+          python-version: "3.11"
+
+      - name: Get version
+        id: get_version
+        run: |
+          python - <<'PY_SCRIPT'
+          import os
+          import tomllib
+          from pathlib import Path
+
+          data = tomllib.loads(Path('pyproject.toml').read_text())
+          version = data['project']['version']
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
+              fh.write(f"version={version}\n")
+          PY_SCRIPT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ steps.get_version.outputs.version }}" \
+            --repo="$GITHUB_REPOSITORY" \
+            --title="${GITHUB_REPOSITORY#*/} ${{ steps.get_version.outputs.version }}" \
+            --generate-notes \
+            artifacts/*/*
