@@ -9,18 +9,46 @@ TARGETS = [
     ROOT / "deps/tokenizers-cpp/msgpack/test-install/CMakeLists.txt",
     ROOT / "deps/tokenizers-cpp/sentencepiece/CMakeLists.txt",
 ]
-PATTERN = re.compile(r"(?i)cmake_minimum_required\s*\(\s*VERSION\s+3\.1\s+FATAL_ERROR\s*\)")
-REPLACEMENT = "cmake_minimum_required(VERSION 3.18 FATAL_ERROR)"
+PATTERN = re.compile(
+    r"(?i)(cmake_minimum_required\s*\(\s*VERSION\s+)([0-9][0-9.]*)([^)]*\))"
+)
+TARGET_VERSION = "3.18"
+
+
+def needs_update(version: str) -> bool:
+    def parse(v: str) -> list[int]:
+        return [int(p) for p in v.split(".") if p]
+
+    current_parts = parse(version)
+    target_parts = parse(TARGET_VERSION)
+    length = max(len(current_parts), len(target_parts))
+    current_parts += [0] * (length - len(current_parts))
+    target_parts += [0] * (length - len(target_parts))
+    return current_parts < target_parts
+
+
+def make_replacer():
+    state = {"updated": 0}
+
+    def replacer(match: re.Match[str]) -> str:
+        prefix, version, suffix = match.groups()
+        if needs_update(version):
+            state["updated"] += 1
+            return f"{prefix}{TARGET_VERSION}{suffix}"
+        return match.group(0)
+
+    return PATTERN, replacer, state
 
 
 def patch(path: pathlib.Path) -> int:
     if not path.exists():
         return 0
     text = path.read_text()
-    new_text, count = PATTERN.subn(REPLACEMENT, text)
-    if count:
+    pattern, replacer, state = make_replacer()
+    new_text, _ = pattern.subn(replacer, text)
+    if state["updated"]:
         path.write_text(new_text)
-    return count
+    return state["updated"]
 
 
 def main() -> int:
