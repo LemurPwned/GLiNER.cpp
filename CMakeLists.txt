@@ -50,12 +50,19 @@ set(PCRE2_BUILD_PCRE2_16 OFF CACHE BOOL "Build 16bit PCRE2 library")
 set(PCRE2_BUILD_PCRE2_32 OFF CACHE BOOL "Build 32bit PCRE2 library")
 set(PCRE2_BUILD_TESTS OFF CACHE BOOL "Build PCRE2 tests")
 set(PCRE2_BUILD_PROGRAMS OFF CACHE BOOL "Build PCRE2 programs")
+set(PCRE2_BUILD_PCRE2GREP OFF CACHE BOOL "Build pcre2grep utility")
 
 # Fetch and make PCRE2 available
 FetchContent_MakeAvailable(pcre2)
 
 set(PCRE2_INCLUDE_DIRS ${pcre2_SOURCE_DIR}/src ${pcre2_BINARY_DIR}/src)
 set(PCRE2_LIBRARIES pcre2-8)
+
+foreach(_pcre_prog IN ITEMS pcre2grep pcre2test)
+    if(TARGET ${_pcre_prog})
+        set_target_properties(${_pcre_prog} PROPERTIES EXCLUDE_FROM_ALL TRUE EXCLUDE_FROM_DEFAULT_BUILD TRUE)
+    endif()
+endforeach()
 
 option(BUILD_EXAMPLES "Build example programs" OFF)
 option(BUILD_PYTHON "Build Python bindings" OFF)
