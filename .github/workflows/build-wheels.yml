@@ -171,14 +171,14 @@ jobs:
         run: python -m twine check dist/*
 
       - name: Upload sdist to Test PyPI (dry run)
-        if: env.IS_DRY_RUN == 'true' && secrets.TEST_PYPI_API_TOKEN != ''
+        if: env.IS_DRY_RUN == 'true'
         env:
           TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
         run: python -m twine upload --repository testpypi dist/* --verbose
         continue-on-error: true
 
       - name: Upload sdist to PyPI (production)
-        if: env.IS_DRY_RUN == 'false' && secrets.PYPI_API_TOKEN != ''
+        if: env.IS_DRY_RUN == 'false'
         env:
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: python -m twine upload dist/*
