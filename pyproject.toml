@@ -27,6 +27,14 @@ wheel.packages = []
 [tool.scikit-build.cmake.define]
 BUILD_PYTHON = "ON"
 
+[tool.cibuildwheel]
+# Skip 32-bit builds and PyPy
+skip = ["*-win32", "*-manylinux_i686", "pp*"]
+
+[tool.cibuildwheel.linux]
+# Configure auditwheel to exclude system libraries
+repair-wheel-command = "auditwheel repair --exclude libdl.so.2 --exclude libpthread.so.0 --exclude librt.so.1 -w {dest_dir} {wheel}"
+
 [tool.scikit-build.sdist]
 include = [
   "bindings/python.cpp",
