@@ -5,4 +5,4 @@ CMakeFiles/
 .vscode/
 onnxruntime*/
 models/
-**.onnx
+*.onnx 
