@@ -4,3 +4,5 @@ cmake_install.cmake
 CMakeFiles/
 .vscode/
 onnxruntime*/
+models/
+**.onnx

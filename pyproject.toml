@@ -30,6 +30,7 @@ BUILD_PYTHON = "ON"
 [tool.scikit-build.sdist]
 include = [
   "bindings/python.cpp",
+  "bindings/gliner_cpp.pyi",
   "bindings/CMakeLists.txt",
   "CMakeLists.txt",
   "cmake/**/*.cmake",
@@ -37,5 +38,6 @@ include = [
   "src/**/*.cpp",
   "deps/CMakeLists.txt",
   "README.md",
-  "LICENSE"
+  "LICENSE",
+  "scripts/generate_stubs.py"
 ]

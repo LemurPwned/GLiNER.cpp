@@ -1,0 +1,109 @@
+name: Build Wheels
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'When false, publish built artifacts after a successful build'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  wheels:
+    name: cibuildwheel (${{ matrix.cibw_platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+        include:
+          - os: ubuntu-latest
+            cibw_platform: linux
+          - os: macos-latest
+            cibw_platform: macos
+          - os: windows-latest
+            cibw_platform: windows
+    runs-on: ${{ matrix.os }}
+
+    env:
+      CIBW_SKIP: pp*
+      CIBW_ENVIRONMENT: CMAKE_ARGS=-DDOWNLOAD_ONNXRUNTIME=ON
+      CIBW_ENVIRONMENT_MACOS: CMAKE_ARGS=-DDOWNLOAD_ONNXRUNTIME=ON MACOSX_DEPLOYMENT_TARGET=11.0
+      CIBW_ENVIRONMENT_WINDOWS: CMAKE_ARGS=-DDOWNLOAD_ONNXRUNTIME=ON
+      CIBW_PROJECT_REQUIRES_PYTHON: ">=3.10"
+      CIBW_TEST_COMMAND: 'cd {project} && python test_bindings/test_inference.py'
+      DRY_RUN: "true"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download test model assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          MODEL_NAME="gliner_small-v2.1"
+          MODEL_DIR="models/${MODEL_NAME}"
+          mkdir -p "${MODEL_DIR}"
+          curl -L --fail --retry 5 --retry-delay 5 \
+            "https://huggingface.co/onnx-community/${MODEL_NAME}/resolve/main/tokenizer.json" \
+            -o "${MODEL_DIR}/tokenizer.json"
+          curl -L --fail --retry 5 --retry-delay 5 \
+            "https://huggingface.co/onnx-community/${MODEL_NAME}/resolve/main/onnx/model.onnx" \
+            -o "${MODEL_DIR}/model.onnx"
+
+      - name: Determine dry run mode
+        shell: bash
+        env:
+          DISPATCH_DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          dry_run=true
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            if [[ "$GITHUB_REF" == "refs/heads/main" || "$GITHUB_REF" == refs/tags/* ]]; then
+              dry_run=false
+            fi
+          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$DISPATCH_DRY_RUN" == "false" ]]; then
+            dry_run=false
+          fi
+          echo "Dry run mode: $dry_run"
+          echo "DRY_RUN=$dry_run" >> "$GITHUB_ENV"
+
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install cibuildwheel==2.20.0 build
+
+      - name: Build wheels
+        run: |
+          python -m cibuildwheel --output-dir wheelhouse --platform ${{ matrix.cibw_platform }}
+
+      - name: Build sdist (linux only)
+        if: matrix.cibw_platform == 'linux'
+        run: |
+          python -m build --sdist --outdir wheelhouse
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gliner-cpp-${{ matrix.cibw_platform }}-wheels
+          path: wheelhouse
+          if-no-files-found: error
+
+      - name: Publish to PyPI
+        if: env.DRY_RUN == 'false' && secrets.PYPI_API_TOKEN != ''
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          packages_dir: wheelhouse
+          skip_existing: true

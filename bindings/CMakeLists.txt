@@ -45,3 +45,7 @@ install(TARGETS gliner_cpp
     RUNTIME DESTINATION .
     ARCHIVE DESTINATION .
 )
+
+install(FILES ${PROJECT_SOURCE_DIR}/bindings/gliner_cpp.pyi
+    DESTINATION .
+)
