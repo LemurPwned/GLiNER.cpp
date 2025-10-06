@@ -39,7 +39,6 @@ repair-wheel-command = "auditwheel repair --exclude libdl.so.2 --exclude libpthr
 [tool.scikit-build.sdist]
 include = [
   "bindings/python.cpp",
-  "bindings/wasm.cpp",
   "bindings/gliner_cpp.pyi",
   "bindings/CMakeLists.txt",
   "CMakeLists.txt",

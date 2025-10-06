@@ -69,16 +69,11 @@ void Model::initialize(const std::string& tokenizer_path) {
 }
 
 void Model::useDevice(Ort::SessionOptions* session_options, const int device_id) {
-#if defined(__EMSCRIPTEN__)
-    (void)session_options;
-    (void)device_id;
-#else
     if (device_id >= 0) {
         OrtCUDAProviderOptions cuda_options;
         cuda_options.device_id = 0;
         session_options->AppendExecutionProvider_CUDA(cuda_options);
     }
-#endif
 }
 
 int64_t Model::count_total_elements(std::vector<int64_t>& output_shape) {

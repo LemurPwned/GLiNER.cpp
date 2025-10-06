@@ -29,10 +29,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
-    add_compile_definitions(COMPILE_WASM_RUNTIME)
-endif()
-
 set(PCRE2_VERSION "10.44")
 
 if (MSVC)
@@ -70,16 +66,6 @@ endforeach()
 
 option(BUILD_EXAMPLES "Build example programs" OFF)
 option(BUILD_PYTHON "Build Python bindings" OFF)
-option(BUILD_WASM "Build WebAssembly bindings" OFF)
-
-if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
-    set(BUILD_WASM ON CACHE BOOL "Build WebAssembly bindings" FORCE)
-    set(BUILD_PYTHON OFF CACHE BOOL "Build Python bindings" FORCE)
-    if(NOT DEFINED DOWNLOAD_ONNXRUNTIME OR DOWNLOAD_ONNXRUNTIME)
-        message(WARNING "DOWNLOAD_ONNXRUNTIME is not supported for Emscripten targets. Disabling automatic download.")
-    endif()
-    set(DOWNLOAD_ONNXRUNTIME OFF CACHE BOOL "Automatically download a suitable ONNX Runtime package" FORCE)
-endif()
 
 # ONNX Runtime setup
 set(ONNXRUNTIME_ROOTDIR "" CACHE PATH "Root directory containing the ONNX Runtime headers and libraries")
@@ -215,27 +201,13 @@ if (GPU_CHECK)
 endif()
 
 find_library(ONNXRUNTIME_LIB
-    NAMES onnxruntime libonnxruntime onnxruntime_webassembly libonnxruntime_webassembly
+    NAMES onnxruntime libonnxruntime
     PATHS ${ONNXRUNTIME_LIB_DIR}
     NO_DEFAULT_PATH
 )
 
 if(NOT ONNXRUNTIME_LIB)
-    if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
-        message(FATAL_ERROR "ONNXRuntime WebAssembly library not found. Please set ONNXRUNTIME_LIB manually or point ONNXRUNTIME_ROOTDIR to a wasm build.")
-    else()
-        message(FATAL_ERROR "ONNXRuntime library not found. Please check the library path.")
-    endif()
-endif()
-
-set(ONNXRUNTIME_EXTRA_LIBS "" CACHE STRING "Optional additional ONNX Runtime libraries to link (semicolon separated).")
-if(ONNXRUNTIME_EXTRA_LIBS)
-    string(REPLACE " " ";" ONNXRUNTIME_EXTRA_LIBS "${ONNXRUNTIME_EXTRA_LIBS}")
-endif()
-
-set(ONNXRUNTIME_ALL_LIBS ${ONNXRUNTIME_LIB})
-if(ONNXRUNTIME_EXTRA_LIBS)
-    list(APPEND ONNXRUNTIME_ALL_LIBS ${ONNXRUNTIME_EXTRA_LIBS})
+    message(FATAL_ERROR "ONNXRuntime library not found. Please check the library path.")
 endif()
 
 execute_process(
@@ -253,7 +225,7 @@ endif()
 add_subdirectory(deps)
 add_subdirectory(src)
 
-if(BUILD_PYTHON OR BUILD_WASM)
+if(BUILD_PYTHON)
     add_subdirectory(bindings)
 endif()
 
