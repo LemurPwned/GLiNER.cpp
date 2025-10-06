@@ -100,7 +100,7 @@ jobs:
           if-no-files-found: error
 
       - name: Publish to PyPI
-        if: env.DRY_RUN == 'false' && secrets.PYPI_API_TOKEN != ''
+        if: env.DRY_RUN == 'false'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
