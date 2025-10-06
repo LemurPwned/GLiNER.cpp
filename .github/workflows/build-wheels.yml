@@ -52,7 +52,7 @@ jobs:
       CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
       CIBW_ENVIRONMENT: 'CMAKE_ARGS=-DDOWNLOAD_ONNXRUNTIME=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DGIT_SUBMODULE=OFF PATH=$HOME/.cargo/bin:$PATH RUSTFLAGS="-A dangerous_implicit_autorefs"'
       CIBW_ENVIRONMENT_MACOS: 'CMAKE_ARGS=-DDOWNLOAD_ONNXRUNTIME=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DGIT_SUBMODULE=OFF MACOSX_DEPLOYMENT_TARGET=11.0 PATH=$HOME/.cargo/bin:$PATH RUSTFLAGS="-A dangerous_implicit_autorefs"'
-      CIBW_BEFORE_BUILD: "python {project}/scripts/patch_tokenizers_cmake.py"
+      CIBW_BEFORE_BUILD: 'python -m pip install --upgrade "cmake>=3.26" && python {project}/scripts/patch_tokenizers_cmake.py'
       CIBW_BEFORE_ALL_LINUX: "if ! command -v curl >/dev/null 2>&1; then yum install -y curl; fi; curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --profile minimal -y"
     steps:
       - uses: actions/checkout@v4
