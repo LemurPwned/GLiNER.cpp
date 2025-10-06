@@ -76,6 +76,7 @@ if(BUILD_WASM)
         "-sMODULARIZE=1"
         "-sEXPORT_ES6=1"
         "-sENVIRONMENT=web,worker,node"
+        "-sEXPORTED_RUNTIME_METHODS=['FS']"
     )
 
     if(DEFINED ONNXRUNTIME_RUNTIME_LIBS)

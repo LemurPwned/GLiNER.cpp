@@ -13,6 +13,38 @@ GLiNER.cpp is a C++-based inference engine for running GLiNER (Generalist and Li
 cd GLiNER.cpp && python -m pip install .
 ```
 
+## WebAssembly bindings
+
+The project can also be built with Emscripten to obtain a WebAssembly module that exposes the same inference API for browser applications (for example, React).
+
+1. Install the [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html) and activate it (`source /path/to/emsdk_env.sh`).
+2. Build ONNX Runtime for the wasm target and point `ONNXRUNTIME_ROOTDIR` to the unpacked SDK that contains `libonnxruntime_webassembly.a` together with the headers. Native prebuilt downloads are not compatible with the wasm build.
+3. Configure and build using the Emscripten tooling:
+
+```bash
+emcmake cmake -B build-wasm -S . \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_WASM=ON \
+  -DONNXRUNTIME_ROOTDIR=/absolute/path/to/onnxruntime-wasm
+emmake cmake --build build-wasm -j
+```
+
+The generated module lives under `build-wasm/bindings/` (for example `gliner.js` and `gliner.wasm`) and is emitted with `MODULARIZE=1` and ES module output:
+
+```javascript
+import createGLiNER from './gliner.js';
+
+const Module = await createGLiNER();
+Module.FS.writeFile('model.onnx', modelBytes);
+Module.FS.writeFile('tokenizer.json', tokenizerBytes);
+
+const cfg = Module.createConfig(12, 512, Module.ModelType.SPAN_LEVEL);
+const model = new Module.Model('model.onnx', 'tokenizer.json', cfg);
+const spans = model.inference(['The capital of France is Paris.'], ['LOCATION']);
+```
+
+Use the embedded `FS` helper to stage model/tokenizer assets before constructing the model. If your ONNX Runtime wasm build splits functionality into multiple static libraries, pass them with `-DONNXRUNTIME_EXTRA_LIBS="libonnxruntime_providers.a;libonnxruntime_common.a"` during configuration.
+
 ## Example 
 
 ONNX model example
