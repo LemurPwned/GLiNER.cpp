@@ -1,0 +1,41 @@
+[build-system]
+requires = [
+  "scikit-build-core>=0.6",
+  "pybind11>=2.11",
+  "setuptools>=68",
+  "wheel"
+]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "gliner-cpp"
+version = "1.0.0"
+description = "Python bindings for the GLiNER C++ inference library"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [
+  { name = "GLiNER Contributors" }
+]
+
+[project.urls]
+Homepage = "https://github.com/LemurPwned/GLiNER.cpp"
+
+[tool.scikit-build]
+wheel.packages = []
+
+[tool.scikit-build.cmake.define]
+BUILD_PYTHON = "ON"
+
+[tool.scikit-build.sdist]
+include = [
+  "bindings/python.cpp",
+  "bindings/CMakeLists.txt",
+  "CMakeLists.txt",
+  "cmake/**/*.cmake",
+  "include/**/*.hpp",
+  "src/**/*.cpp",
+  "deps/CMakeLists.txt",
+  "README.md",
+  "LICENSE"
+]

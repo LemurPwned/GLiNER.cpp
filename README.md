@@ -36,24 +36,23 @@ git submodule update --init --recursive
 **📦 CPU build dependencies & instructions**
  - CMake (>= 3.18)
  - [Rust and Cargo](https://www.rust-lang.org/tools/install)
- - [ONNXRuntime](https://github.com/microsoft/onnxruntime/releases) CPU version for your system
  - OpenMP 
 
-You need to download [ONNX runtime](https://github.com/microsoft/onnxruntime/releases) for your system.
+The CMake project can download ONNX Runtime automatically during configuration (default behaviour, requires network access). Just run:
 
-Once you downloaded it, unpack it within the same directory as GLiNER.cpp code.
-
-For `tar.gz` files you can use the following command:
 ```bash
-tar -xvzf onnxruntime-linux-x64-1.19.2.tgz 
-```
-
-Then create a build directory and compile the project:
-```bash
-cmake -D ONNXRUNTIME_ROOTDIR="/home/usr/onnxruntime-linux-x64-1.19.2" -S . -B build
+cmake -S . -B build -DDOWNLOAD_ONNXRUNTIME=ON
 cmake --build build --target all -j
 ```
-You need to provide the ONNXRUNTIME_ROOTDIR option, which should be set to the absolute path of the chosen ONNX runtime.
+
+If you prefer to manage ONNX Runtime yourself (offline builds, custom builds, etc.), download the archive matching your platform from the [ONNX Runtime releases](https://github.com/microsoft/onnxruntime/releases), unpack it anywhere, and configure CMake with the extracted path:
+
+```bash
+cmake -S . -B build \
+  -DDOWNLOAD_ONNXRUNTIME=OFF \
+  -DONNXRUNTIME_ROOTDIR="/absolute/path/to/onnxruntime-osx-universal2-1.19.2"
+cmake --build build --target all -j
+```
 
 To run main.cpp you need an ONNX format model and tokenizer.json. You can:
 
