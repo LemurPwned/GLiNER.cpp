@@ -50,9 +50,10 @@ jobs:
       CIBW_TEST_SKIP: "*-musllinux*"
       CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
       CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
-      CIBW_ENVIRONMENT: CMAKE_ARGS=-DDOWNLOAD_ONNXRUNTIME=ON
-      CIBW_ENVIRONMENT_MACOS: CMAKE_ARGS=-DDOWNLOAD_ONNXRUNTIME=ON MACOSX_DEPLOYMENT_TARGET=11.0
-      CIBW_ENVIRONMENT_WINDOWS: CMAKE_ARGS=-DDOWNLOAD_ONNXRUNTIME=ON
+      CIBW_ENVIRONMENT: "CMAKE_ARGS=-DDOWNLOAD_ONNXRUNTIME=ON PATH=$HOME/.cargo/bin:$PATH"
+      CIBW_ENVIRONMENT_MACOS: "CMAKE_ARGS=-DDOWNLOAD_ONNXRUNTIME=ON MACOSX_DEPLOYMENT_TARGET=11.0 PATH=$HOME/.cargo/bin:$PATH"
+      CIBW_ENVIRONMENT_WINDOWS: "CMAKE_ARGS=-DDOWNLOAD_ONNXRUNTIME=ON PATH=%USERPROFILE%\\.cargo\\bin;%PATH%"
+      CIBW_BEFORE_ALL_LINUX: "if ! command -v curl >/dev/null 2>&1; then yum install -y curl; fi; curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --profile minimal -y"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -93,6 +94,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Install cibuildwheel
         run: python -m pip install --upgrade pip cibuildwheel
