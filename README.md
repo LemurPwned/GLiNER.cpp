@@ -1,5 +1,6 @@
 
 # GLiNER.cpp: Generalist and Lightweight Named Entity Recognition for C++ with Python bindings
+[![Version](https://img.shields.io/pypi/v/gliner-cpp)](https://pypi.org/project/gliner-cpp/)
 
 Forked from: https://github.com/Knowledgator/GLiNER.cpp --> see there for the original repo
 
@@ -7,6 +8,14 @@ Forked from: https://github.com/Knowledgator/GLiNER.cpp --> see there for the or
 GLiNER.cpp is a C++-based inference engine for running GLiNER (Generalist and Lightweight Named Entity Recognition) models. GLiNER can identify any entity type using a bidirectional transformer encoder, offering a practical alternative to traditional NER models and large language models.
 
 ## TlDr;
+
+Install from pypi:
+
+```
+python3 -m pip install gliner-cpp
+```
+
+or from source:
 
 ```bash
 # clone the repo 
